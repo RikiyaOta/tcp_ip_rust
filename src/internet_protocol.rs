@@ -11,6 +11,8 @@ const IPV4_HEADER_UNIT_BITS: usize = 32;
 const IPV4_HEADER_UNIT_BYTES: usize = IPV4_HEADER_UNIT_BITS / 8;
 pub const IPV4_HEADER_MIN_LEN: usize = IHL_MIN_VALUE * IPV4_HEADER_UNIT_BYTES;
 
+type Ipv4Address = [u8; 4];
+
 /*
  * 注意：RFC791 によれば、例えば version などは 4bits であるが、Rust は 4bits のデータを直接表現できない。
  * よって、getter/setter でデータの整合性を保証する。
@@ -36,8 +38,13 @@ pub struct Ipv4Header {
     ttl: u8,
     protocol: u8,
     checksum: u16,
-    source: [u8; 4],
-    destination: [u8; 4],
+
+    /*
+     * ここがいわゆる IP Address ですね。
+     * source, destination
+     */
+    source: Ipv4Address,
+    destination: Ipv4Address,
 }
 
 impl Ipv4Header {
