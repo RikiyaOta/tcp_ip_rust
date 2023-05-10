@@ -44,14 +44,15 @@ pub struct Ipv4Header {
 
     ttl: u8,
     protocol: u8,
-    checksum: u16,
+
+    header_checksum: u16,
 
     /*
      * ここがいわゆる IP Address ですね。
      * source, destination
      */
-    source: Ipv4Address,
-    destination: Ipv4Address,
+    source_address: Ipv4Address,
+    destination_address: Ipv4Address,
 }
 
 impl Ipv4Header {
@@ -116,35 +117,60 @@ impl Ipv4Header {
         self.fragment_offset & ((1 << 13) - 1)
     }
 
+    pub fn get_ttl(&self) -> u8 {
+        self.ttl
+    }
+
+    pub fn set_ttl(&mut self, ttl: u8) {
+        self.ttl = ttl;
+    }
+
+    pub fn get_protocol(&self) -> u8 {
+        self.protocol
+    }
+
+    pub fn set_protocol(&mut self, protocol: u8) {
+        self.protocol = protocol;
+    }
+
+    pub fn get_header_checksum(&self) -> u16 {
+        self.header_checksum
+    }
+
+    /*
+     * 注意：Header checksum は、他のヘッダーフィールドが変わった時（例：TTL）に、再計算をする必要がある。
+     *
+     * なので、他の setter を読んだときにこの`set_header_checksum`を呼ぶようにしたい。
+     * 内部的に呼ぶだけにしたいので、`set_header_checksum`は public にしない。
+     */
+    fn set_header_checksum(&mut self) {
+        unimplemented!();
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         let mut buffer = vec![0u8; 20];
 
-        /*
-         * Version and IHL
-         */
         buffer[0] = (self.get_version() << 4) | self.get_ihl();
 
-        /*
-         * Type of Service
-         */
         buffer[1] = self.get_dscp_ecn();
 
-        /*
-         * Total Length
-         */
         buffer[2..4].copy_from_slice(&self.get_total_length().to_be_bytes());
 
-        /*
-         * Identification
-         */
         buffer[4..6].copy_from_slice(&self.get_identification().to_be_bytes());
 
-        /*
-         * Flags and Fragment Offset
-         */
         let flags_fragment_offset = ((self.get_flags() as u16) << 13) | self.get_fragment_offset();
         buffer[6..8].copy_from_slice(&flags_fragment_offset.to_be_bytes());
 
-        todo!();
+        buffer[8] = self.get_ttl();
+
+        buffer[9] = self.get_protocol();
+
+        buffer[10..12].copy_from_slice(&self.get_header_checksum().to_be_bytes());
+
+        buffer[12..16].copy_from_slice(&self.source_address);
+
+        buffer[16..20].copy_from_slice(&self.destination_address);
+
+        buffer
     }
 }
