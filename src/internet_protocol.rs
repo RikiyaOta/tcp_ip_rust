@@ -1,3 +1,5 @@
+use byteorder::{BigEndian, ByteOrder};
+
 /*
  * 注意：IHL (Internet Header Length) 自体は 4bits.
  * しかし、それは 32bit words つまり 4bytes 単位でデータを表現している。なぜなら、IPヘッダーは各フィールドが32bitsだから。
@@ -62,6 +64,7 @@ impl Ipv4Header {
             "Invalid IP version value!!! It should be 4bits value."
         );
         self.version = version;
+        self.set_header_checksum();
     }
 
     pub fn get_version(&self) -> u8 {
@@ -79,6 +82,7 @@ impl Ipv4Header {
             "Invalid IP header length value!!! It hould be 4bits value."
         );
         self.ihl = ihl;
+        self.set_header_checksum();
     }
 
     pub fn get_ihl(&self) -> u8 {
@@ -110,6 +114,7 @@ impl Ipv4Header {
             "Invalid Flags value!!! It should be 3bits value"
         );
         self.flags = flags;
+        self.set_header_checksum();
     }
 
     pub fn get_fragment_offset(&self) -> u16 {
@@ -123,6 +128,7 @@ impl Ipv4Header {
 
     pub fn set_ttl(&mut self, ttl: u8) {
         self.ttl = ttl;
+        self.set_header_checksum();
     }
 
     pub fn get_protocol(&self) -> u8 {
@@ -131,6 +137,7 @@ impl Ipv4Header {
 
     pub fn set_protocol(&mut self, protocol: u8) {
         self.protocol = protocol;
+        self.set_header_checksum();
     }
 
     pub fn get_header_checksum(&self) -> u16 {
@@ -142,9 +149,50 @@ impl Ipv4Header {
      *
      * なので、他の setter を読んだときにこの`set_header_checksum`を呼ぶようにしたい。
      * 内部的に呼ぶだけにしたいので、`set_header_checksum`は public にしない。
+     *
+     * TODO: 各 setter の中で`set_header_checksum`を呼ぶのは性能的に良くないかもしれない？
+     *       もし複数のフィールドを更新する必要があって、なおかつそれらのフィールド更新の間に、チェックサムが不整合な状態が存在しても構わないなら、まとめて一括で実施したい。
      */
     fn set_header_checksum(&mut self) {
-        unimplemented!();
+        /*
+         * 注意：再計算する前に、Header Checksum はゼロにしておく必要がある。
+         */
+        self.header_checksum = 0;
+
+        /*
+         * 1. ヘッダーをバイト列に変換する。
+         */
+        let bytes = self.encode();
+
+        /*
+         * 2. ヘッダーを 16bits word に変換する。
+         *
+         *    Big Endian が通常は用いられるらしい？
+         */
+        let mut words = Vec::new();
+        for i in (0..bytes.len()).step_by(2) {
+            let word = BigEndian::read_u16(&bytes[i..i + 2]);
+            words.push(word);
+        }
+
+        /*
+         * 3. 全てのワードを足し算する。この時、オーバーフローの可能性があるので注意。
+         *    なお、オーバーフローは無視します。
+         */
+        let mut sum = 0u32;
+        for &word in &words {
+            sum = sum.wrapping_add(u32::from(word));
+        }
+
+        /*
+         * 4. 和の 1 の補数を取ります。
+         *
+         * 注意：オーバーフローを無視するので、まずは u16 に type cast する。
+         * 注意：1の補数は、単にビットを反転させるだけで求められるので、反転演算子`!`を実行している。
+         */
+        let checksum = !(sum as u16);
+
+        self.header_checksum = checksum;
     }
 
     pub fn encode(&self) -> Vec<u8> {
