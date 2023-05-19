@@ -1,4 +1,24 @@
 use byteorder::{BigEndian, ByteOrder};
+use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+pub enum Ipv4HeaderDecodeError {
+    InputTooShort,
+    InvalidFieldValue,
+    // More...
+}
+
+impl fmt::Display for Ipv4HeaderDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Ipv4HeaderDecodeError::InputTooShort => write!(f, "Input too short."),
+            Ipv4HeaderDecodeError::InvalidFieldValue => write!(f, "Invalid field value."),
+        }
+    }
+}
+
+impl Error for Ipv4HeaderDecodeError {}
 
 /*
  * 注意：IHL (Internet Header Length) 自体は 4bits.
@@ -220,5 +240,46 @@ impl Ipv4Header {
         buffer[16..20].copy_from_slice(&self.destination_address);
 
         buffer
+    }
+
+    pub fn decode(buffer: &[u8]) -> Result<Self, Ipv4HeaderDecodeError> {
+        let version = buffer[0] & 0b1111_0000;
+        let ihl = buffer[0] & 0b0000_1111;
+        let dscp = buffer[1] & 0b1111_1100;
+        let ecn = buffer[1] & 0b0000_0011;
+
+        let total_length = ((buffer[2] as u16) << 8) | (buffer[3] as u16);
+        let identification = ((buffer[4] as u16) << 8) | (buffer[5] as u16);
+
+        let flags = buffer[6] & 0b1110_0000;
+        let fragment_offset = (((buffer[6] & 0b0001_1111) as u16) << 8) | buffer[7] as u16;
+
+        let ttl = buffer[8];
+        let protocol = buffer[9];
+
+        /*
+         *
+         * NOTE: ここで誤りがないかチェックする必要があるとか？？？
+         *
+         */
+        let header_checksum = ((buffer[10] as u16) << 8) | buffer[11] as u16;
+        let source_address: Ipv4Address = [buffer[12], buffer[13], buffer[14], buffer[15]];
+        let destination_address: Ipv4Address = [buffer[16], buffer[17], buffer[18], buffer[19]];
+
+        Ok(Self {
+            version,
+            ihl,
+            dscp,
+            ecn,
+            total_length,
+            identification,
+            flags,
+            fragment_offset,
+            ttl,
+            protocol,
+            header_checksum,
+            source_address,
+            destination_address,
+        })
     }
 }
