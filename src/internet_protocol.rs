@@ -177,15 +177,23 @@ impl Ipv4Header {
      *       もし複数のフィールドを更新する必要があって、なおかつそれらのフィールド更新の間に、チェックサムが不整合な状態が存在しても構わないなら、まとめて一括で実施したい。
      */
     fn set_header_checksum(&mut self) {
+        let checksum = self.calculate_header_checksum();
+        self.header_checksum = checksum;
+    }
+
+    fn calculate_header_checksum(&self) -> u16 {
         /*
          * 注意：再計算する前に、Header Checksum はゼロにしておく必要がある。
          */
-        self.header_checksum = 0;
+        let ipv4_header = Self {
+            header_checksum: 0,
+            ..self.clone()
+        };
 
         /*
          * 1. ヘッダーをバイト列に変換する。
          */
-        let bytes = self.encode();
+        let bytes = ipv4_header.encode();
 
         /*
          * 2. ヘッダーを 16bits word に変換する。
@@ -215,7 +223,7 @@ impl Ipv4Header {
          */
         let checksum = !(sum as u16);
 
-        self.header_checksum = checksum;
+        checksum
     }
 
     pub fn encode(&self) -> Vec<u8> {
@@ -331,6 +339,22 @@ impl Ipv4Header {
             Err(Ipv4HeaderDecodeError::InvalidFieldValue(format!(
                 "Unknown `protocol` field value. protocol={}",
                 protocol
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    /*
+     * NOTE: ついでだったので実装した。また実際にパケット受け取ったりするときに使います。
+     */
+    fn validate_checksum(&self) -> Result<(), Ipv4HeaderDecodeError> {
+        let original_checksum = self.header_checksum;
+        let checksum = self.calculate_header_checksum();
+
+        if checksum != original_checksum {
+            Err(Ipv4HeaderDecodeError::InvalidFieldValue(format!(
+                "The header checksum doesn't match."
             )))
         } else {
             Ok(())
