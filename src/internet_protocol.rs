@@ -5,7 +5,7 @@ use std::fmt;
 #[derive(Debug)]
 pub enum Ipv4HeaderDecodeError {
     InputTooShort,
-    InvalidFieldValue,
+    InvalidFieldValue(String),
     // More...
 }
 
@@ -13,7 +13,7 @@ impl fmt::Display for Ipv4HeaderDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Ipv4HeaderDecodeError::InputTooShort => write!(f, "Input too short."),
-            Ipv4HeaderDecodeError::InvalidFieldValue => write!(f, "Invalid field value."),
+            Ipv4HeaderDecodeError::InvalidFieldValue(_todo) => write!(f, "Invalid field value."),
         }
     }
 }
@@ -30,6 +30,9 @@ const IHL_MIN_VALUE: usize = 5;
 const IPV4_HEADER_UNIT_BITS: usize = 32;
 const IPV4_HEADER_UNIT_BYTES: usize = IPV4_HEADER_UNIT_BITS / 8;
 pub const IPV4_HEADER_MIN_LEN: usize = IHL_MIN_VALUE * IPV4_HEADER_UNIT_BYTES;
+const IPV4_VERSION: u8 = 4;
+const TCP_PROTOCOL_NUMBER: u8 = 6;
+const UDP_PROTOCOL_NUMBER: u8 = 17;
 
 type Ipv4Address = [u8; 4];
 
@@ -243,6 +246,8 @@ impl Ipv4Header {
     }
 
     pub fn decode(buffer: &[u8]) -> Result<Self, Ipv4HeaderDecodeError> {
+        Self::validate_buffer_length(buffer)?;
+
         let version = buffer[0] & 0b1111_0000;
         let ihl = buffer[0] & 0b0000_1111;
         let dscp = buffer[1] & 0b1111_1100;
@@ -266,6 +271,10 @@ impl Ipv4Header {
         let source_address: Ipv4Address = [buffer[12], buffer[13], buffer[14], buffer[15]];
         let destination_address: Ipv4Address = [buffer[16], buffer[17], buffer[18], buffer[19]];
 
+        Self::validate_version(version)?;
+        Self::validate_header_length(ihl, buffer.len())?;
+        Self::validate_protocol(protocol)?;
+
         Ok(Self {
             version,
             ihl,
@@ -281,5 +290,50 @@ impl Ipv4Header {
             source_address,
             destination_address,
         })
+    }
+
+    fn validate_buffer_length(buffer: &[u8]) -> Result<(), Ipv4HeaderDecodeError> {
+        if buffer.len() < 20 {
+            Err(Ipv4HeaderDecodeError::InputTooShort)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_version(version: u8) -> Result<(), Ipv4HeaderDecodeError> {
+        if version != IPV4_VERSION {
+            Err(Ipv4HeaderDecodeError::InvalidFieldValue(
+                "The `version` field should be 4.".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_header_length(ihl: u8, buffer_length: usize) -> Result<(), Ipv4HeaderDecodeError> {
+        if usize::from(ihl) < IHL_MIN_VALUE {
+            Err(Ipv4HeaderDecodeError::InvalidFieldValue(format!(
+                "The `ihl` field should not be less than {}.",
+                IHL_MIN_VALUE
+            )))
+        } else if usize::from(ihl * 4) >= buffer_length {
+            Err(Ipv4HeaderDecodeError::InvalidFieldValue(format!(
+                "The `ihl` field value is larget than the byte length. ihl={}. byte_length={}",
+                ihl, buffer_length
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_protocol(protocol: u8) -> Result<(), Ipv4HeaderDecodeError> {
+        if protocol != TCP_PROTOCOL_NUMBER && protocol != UDP_PROTOCOL_NUMBER {
+            Err(Ipv4HeaderDecodeError::InvalidFieldValue(format!(
+                "Unknown `protocol` field value. protocol={}",
+                protocol
+            )))
+        } else {
+            Ok(())
+        }
     }
 }
