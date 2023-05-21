@@ -70,3 +70,55 @@ pub struct ControlBits {
     syn: bool,
     fin: bool,
 }
+
+impl TcpHeader {
+    fn get_data_offset(&self) -> u8 {
+        self.data_offset & 0b0000_1111
+    }
+
+    /*
+     * NOTE: `0`であるべきって仕様.
+     */
+    fn get_reserved(&self) -> u8 {
+        0
+    }
+
+    pub fn encode(&self) -> Vec<u8> {
+        let mut buffer = vec![0u8; 20];
+
+        buffer[0..2].copy_from_slice(&self.source_port.to_be_bytes());
+
+        buffer[2..4].copy_from_slice(&self.destination_port.to_be_bytes());
+
+        buffer[4..8].copy_from_slice(&self.sequence_number.to_be_bytes());
+
+        buffer[8..12].copy_from_slice(&self.acknowledgment_number.to_be_bytes());
+
+        buffer[12] = (self.get_data_offset() << 4) | self.get_reserved();
+
+        buffer[13] = self.control_bits.encode();
+
+        buffer[14..16].copy_from_slice(&self.window.to_be_bytes());
+
+        buffer[16..18].copy_from_slice(&self.checksum.to_be_bytes());
+
+        buffer[18..20].copy_from_slice(&self.urgent_pointer.to_be_bytes());
+
+        buffer.extend(&self.options);
+
+        buffer
+    }
+}
+
+impl ControlBits {
+    fn encode(&self) -> u8 {
+        (u8::from(self.cwr) << 7)
+            | (u8::from(self.ece) << 6)
+            | (u8::from(self.urg) << 5)
+            | (u8::from(self.ack) << 4)
+            | (u8::from(self.psh) << 3)
+            | (u8::from(self.rst) << 2)
+            | (u8::from(self.syn) << 1)
+            | u8::from(self.fin)
+    }
+}
