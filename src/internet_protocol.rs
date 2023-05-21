@@ -40,7 +40,7 @@ type Ipv4Address = [u8; 4];
  * 注意：RFC791 によれば、例えば version などは 4bits であるが、Rust は 4bits のデータを直接表現できない。
  * よって、getter/setter でデータの整合性を保証する。
  */
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Ipv4Header {
     version: u8,
     ihl: u8,
