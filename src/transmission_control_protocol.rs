@@ -122,3 +122,54 @@ impl ControlBits {
             | u8::from(self.fin)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_success_encode() {
+        let control_bits = ControlBits {
+            cwr: false,
+            ece: false,
+            urg: false,
+            ack: false,
+            psh: false,
+            rst: false,
+            syn: false,
+            fin: false,
+        };
+
+        let tcp_header = TcpHeader {
+            source_port: 5432,
+            destination_port: 3306,
+            sequence_number: 100,
+            acknowledgment_number: 200,
+            data_offset: 5,
+            reserved: 0,
+            control_bits,
+            window: 10,
+            checksum: 123,
+            urgent_pointer: 50,
+            options: vec![],
+        };
+
+        let expected_output: Vec<u8> = vec![
+            /*
+             * Expected Source Port Bytes
+             */
+            21, // ((5432u16 & 0b1111_1111_0000_0000) >> 8) as u8,
+            56, // (5432u16 & 0b0000_0000_1111_1111) as u8,
+
+                /*
+                 * Expected Destination Port Bytes
+                 */
+
+                /*
+                 * ToDo...
+                 */
+        ];
+
+        assert_eq!(tcp_header.encode(), expected_output);
+    }
+}
