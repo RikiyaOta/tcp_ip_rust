@@ -31,7 +31,7 @@ pub struct TcpHeader {
     /*
      * Reserved (4bits)
      */
-    reserved: u8,
+    // reserved: u8,
 
     /*
      * Control Bits (8bits)
@@ -143,14 +143,14 @@ mod tests {
         let tcp_header = TcpHeader {
             source_port: 5432,
             destination_port: 3306,
-            sequence_number: 100,
-            acknowledgment_number: 200,
+            sequence_number: 375912035,
+            acknowledgment_number: 768347,
             data_offset: 5,
-            reserved: 0,
+            // reserved: 0,
             control_bits,
-            window: 10,
-            checksum: 123,
-            urgent_pointer: 50,
+            window: 1000,
+            checksum: 2222,
+            urgent_pointer: 3333,
             options: vec![],
         };
 
@@ -158,15 +158,49 @@ mod tests {
             /*
              * Expected Source Port Bytes
              */
-            21, // ((5432u16 & 0b1111_1111_0000_0000) >> 8) as u8,
-            56, // (5432u16 & 0b0000_0000_1111_1111) as u8,
+            21, 56, /*
+             * Expected Destination Port Bytes
+             */
+            12, 234,
+            /*
+             * Sequence Number Bytes
+             */
+            22,  // ((375912035u32 & 0xFF00_0000) >> 24) as u8,
+            103, // ((375912035u32 & 0x00FF_0000) >> 16) as u8,
+            246, // ((375912035u32 & 0x0000_FF00) >> 8) as u8,
+            99,  // (375912035u32 & 0x0000_00FF) as u8,
+            /*
+             * Acknowledgment Number Bytes
+             */
+            0,   // ((768347u32 & 0xFF00_0000) >> 24) as u8,
+            11,  // ((768347u32 & 0x00FF_0000) >> 16) as u8,
+            185, // ((768347u32 & 0x0000_FF00) >> 8) as u8,
+            91,  // (768347u32 & 0x0000_00FF) as u8,
+            /*
+             * Data Offset Bytes and Reserved Bytes
+             */
+            80, /*
+             * Control Bits Bytes
+             */
+            0,
+            /*
+             * Window Bytes
+             */
+            3,   // ((1000u16 & 0xFF00) >> 8) as u8,
+            232, // (1000u16 & 0x00FF) as u8,
+            /*
+             * Checksum Bytes
+             */
+            8,   // ((2222u16 & 0xFF00) >> 8) as u8,
+            174, // (2222u16 & 0x00FF) as u8,
+            /*
+             * Urgent Pointer
+             */
+            13, // ((3333u16 & 0xFF00) >> 8) as u8,
+            5,  // (3333u16 & 0x00FF) as u8,
 
                 /*
-                 * Expected Destination Port Bytes
-                 */
-
-                /*
-                 * ToDo...
+                 * Options Bytes
                  */
         ];
 
