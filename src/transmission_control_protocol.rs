@@ -1,3 +1,4 @@
+use byteorder::{BigEndian, ByteOrder};
 use std::error::Error;
 use std::fmt;
 /*
@@ -5,7 +6,7 @@ use std::fmt;
  */
 
 #[derive(Debug)]
-enum TcpHeaderDecodeError {
+pub enum TcpHeaderDecodeError {
     InputTooShort,
     InvalidFieldValue(String),
 }
@@ -51,7 +52,7 @@ pub struct TcpHeader {
     /*
      * Reserved (4bits)
      */
-    // reserved: u8,
+    reserved: u8,
 
     /*
      * Control Bits (8bits)
@@ -128,6 +129,85 @@ impl TcpHeader {
 
         buffer
     }
+
+    pub fn decode(buffer: &[u8]) -> Result<Self, TcpHeaderDecodeError> {
+        Self::validate_buffer_length(buffer)?;
+
+        let source_port = BigEndian::read_u16(&buffer[0..2]);
+        let destination_port = BigEndian::read_u16(&buffer[2..4]);
+        let sequence_number = BigEndian::read_u32(&buffer[4..8]);
+        let acknowledgment_number = BigEndian::read_u32(&buffer[8..12]);
+
+        let data_offset = buffer[12] >> 4;
+        Self::validate_data_offset(data_offset, buffer)?;
+
+        let reserved = buffer[12] & 0b0000_1111;
+        Self::validate_reserved(reserved)?;
+
+        let control_bits = ControlBits::decode(buffer[13]).unwrap();
+
+        let window = BigEndian::read_u16(&buffer[14..16]);
+        let checksum = BigEndian::read_u16(&buffer[16..18]);
+        let urgent_pointer = BigEndian::read_u16(&buffer[18..20]);
+
+        /*
+         * TODO: 一旦後回し。
+         */
+        let options = vec![];
+
+        Ok(Self {
+            source_port,
+            destination_port,
+            sequence_number,
+            acknowledgment_number,
+            data_offset,
+            reserved,
+            control_bits,
+            window,
+            checksum,
+            urgent_pointer,
+            options,
+        })
+    }
+
+    fn validate_buffer_length(buffer: &[u8]) -> Result<(), TcpHeaderDecodeError> {
+        if buffer.len() < 20 {
+            Err(TcpHeaderDecodeError::InputTooShort)
+        } else {
+            Ok(())
+        }
+    }
+
+    /*
+     * TODO: options を考慮に入れてバリデーションをする。
+     */
+    fn validate_data_offset(data_offset: u8, buffer: &[u8]) -> Result<(), TcpHeaderDecodeError> {
+        if data_offset < 5 {
+            Err(TcpHeaderDecodeError::InvalidFieldValue(format!(
+                "Data Offset field must be equal or greater than 5. data_offset={}",
+                data_offset
+            )))
+        } else if buffer.len() < data_offset as usize * 4 {
+            Err(TcpHeaderDecodeError::InvalidFieldValue(format!(
+                "Expected buffer length to be at least {} but was {}",
+                data_offset as usize * 4,
+                buffer.len()
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_reserved(reserved: u8) -> Result<(), TcpHeaderDecodeError> {
+        if reserved != 0 {
+            Err(TcpHeaderDecodeError::InvalidFieldValue(format!(
+                "Reserved field must be zero. reserved={}",
+                reserved
+            )))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl ControlBits {
@@ -140,6 +220,28 @@ impl ControlBits {
             | (u8::from(self.rst) << 2)
             | (u8::from(self.syn) << 1)
             | u8::from(self.fin)
+    }
+
+    fn decode(byte: u8) -> Result<Self, TcpHeaderDecodeError> {
+        let cwr = ((byte & 0b1000_0000) >> 7) == 1;
+        let ece = ((byte & 0b0100_0000) >> 6) == 1;
+        let urg = ((byte & 0b0010_0000) >> 5) == 1;
+        let ack = ((byte & 0b0001_0000) >> 4) == 1;
+        let psh = ((byte & 0b0000_1000) >> 3) == 1;
+        let rst = ((byte & 0b0000_0100) >> 2) == 1;
+        let syn = ((byte & 0b0000_0010) >> 1) == 1;
+        let fin = (byte & 0b0000_0001) == 1;
+
+        Ok(Self {
+            cwr,
+            ece,
+            urg,
+            ack,
+            psh,
+            rst,
+            syn,
+            fin,
+        })
     }
 }
 
@@ -166,7 +268,7 @@ mod tests {
             sequence_number: 375912035,
             acknowledgment_number: 768347,
             data_offset: 5,
-            // reserved: 0,
+            reserved: 0,
             control_bits,
             window: 1000,
             checksum: 2222,
