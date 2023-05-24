@@ -1,4 +1,5 @@
 use crate::internet_protocol::Ipv4Address;
+use crate::transmission_control_protocol::{tcp_packet::TcpPacket, TCP_PROTOCOL_NUMBER};
 
 /*
  * NOTE: IPv4 を念頭に実装する。IPv6 の場合は違う。
@@ -32,6 +33,25 @@ pub struct TcpPseudoHeader {
 }
 
 impl TcpPseudoHeader {
+    pub fn new(tcp_packet: &TcpPacket) -> Self {
+        let source_address = tcp_packet.get_source_address();
+        let destination_address = tcp_packet.get_destination_address();
+        let zero = 0u8;
+        let ptcl = TCP_PROTOCOL_NUMBER;
+
+        // TODO: これでいいんだっけ。勢いで書いてて眠い。
+        let tcp_length = (tcp_packet.calculate_tcp_header_length()
+            + tcp_packet.calculate_payload_length()) as u16;
+
+        Self {
+            source_address,
+            destination_address,
+            zero,
+            ptcl,
+            tcp_length,
+        }
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         let mut buffer = vec![0u8; 12];
 

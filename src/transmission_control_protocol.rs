@@ -3,7 +3,10 @@ use byteorder::{BigEndian, ByteOrder};
 use std::error::Error;
 use std::fmt;
 
+pub mod tcp_packet;
 pub mod tcp_pseudo_header;
+
+pub const TCP_PROTOCOL_NUMBER: u8 = 6;
 
 /*
  * See: https://www.rfc-editor.org/rfc/rfc9293.html
@@ -94,13 +97,6 @@ pub struct ControlBits {
     rst: bool,
     syn: bool,
     fin: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct TcpPacket {
-    ip_v4_header: Ipv4Header,
-    tcp_header: TcpHeader,
-    payload: Vec<u8>,
 }
 
 impl TcpHeader {
@@ -253,12 +249,6 @@ impl ControlBits {
             syn,
             fin,
         })
-    }
-}
-
-impl TcpPacket {
-    pub fn calculate_checksum(&self) -> u16 {
-        unimplemented!()
     }
 }
 
