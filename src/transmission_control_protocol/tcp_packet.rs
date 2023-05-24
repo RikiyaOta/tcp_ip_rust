@@ -26,6 +26,10 @@ impl TcpPacket {
     }
 
     pub fn calculate_checksum(&self) -> u16 {
-        unimplemented!()
+        let tcp_pseudo_header = TcpPseudoHeader::new(&self);
+        let tcp_pseudo_header_bytes = tcp_pseudo_header.encode();
+        let tcp_header_bytes = self.tcp_header.encode();
+
+        todo!()
     }
 }
