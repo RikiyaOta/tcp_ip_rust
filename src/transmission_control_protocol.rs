@@ -328,4 +328,17 @@ mod tests {
 
         assert_eq!(tcp_header.encode(), expected_output);
     }
+    
+    #[test]    
+    fn test_decode_too_short_input() {
+        let buffer: Vec<u8> = vec![];
+        let result = TcpHeader::decode(&buffer);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(TcpHeaderDecodeError::InputTooShort)));
+        
+        let buffer = vec![0u8; 19];
+        let result = TcpHeader::decode(&buffer);
+        assert!(result.is_err());
+        assert!(matches!(result, Err(TcpHeaderDecodeError::InputTooShort)));
+    }
 }
