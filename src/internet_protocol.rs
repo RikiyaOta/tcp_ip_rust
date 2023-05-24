@@ -34,7 +34,7 @@ const IPV4_VERSION: u8 = 4;
 const TCP_PROTOCOL_NUMBER: u8 = 6;
 const UDP_PROTOCOL_NUMBER: u8 = 17;
 
-type Ipv4Address = [u8; 4];
+pub type Ipv4Address = [u8; 4];
 
 /*
  * 注意：RFC791 によれば、例えば version などは 4bits であるが、Rust は 4bits のデータを直接表現できない。

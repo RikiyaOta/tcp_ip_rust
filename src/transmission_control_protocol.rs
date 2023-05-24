@@ -1,6 +1,8 @@
+use crate::internet_protocol::{Ipv4Address, Ipv4Header};
 use byteorder::{BigEndian, ByteOrder};
 use std::error::Error;
 use std::fmt;
+
 /*
  * See: https://www.rfc-editor.org/rfc/rfc9293.html
  */
@@ -22,7 +24,7 @@ impl fmt::Display for TcpHeaderDecodeError {
 
 impl Error for TcpHeaderDecodeError {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TcpHeader {
     /*
      * Source Port (16bits)
@@ -90,6 +92,44 @@ pub struct ControlBits {
     rst: bool,
     syn: bool,
     fin: bool,
+}
+
+/*
+ * NOTE: IPv4 を念頭に実装する。IPv6 の場合は違う。
+ */
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct TcpPseudoHeader {
+    /*
+     * Source IPv4 Address.
+     */
+    source_address: Ipv4Address,
+
+    /*
+     * Destination IPv4 Address.
+     */
+    destination_address: Ipv4Address,
+
+    /*
+     * Zero. This filed should be `0`.
+     */
+    zero: u8,
+
+    /*
+     * Protocol Number. TCP の場合は`6`.
+     */
+    ptcl: u8,
+
+    /*
+     * TCP Header Length and the Data Length in octets.
+     */
+    tcp_length: u16,
+}
+
+#[derive(Debug, Clone)]
+pub struct TcpPacket {
+    ip_v4_header: Ipv4Header,
+    tcp_header: TcpHeader,
+    payload: Vec<u8>,
 }
 
 impl TcpHeader {
@@ -328,14 +368,14 @@ mod tests {
 
         assert_eq!(tcp_header.encode(), expected_output);
     }
-    
-    #[test]    
+
+    #[test]
     fn test_decode_too_short_input() {
         let buffer: Vec<u8> = vec![];
         let result = TcpHeader::decode(&buffer);
         assert!(result.is_err());
         assert!(matches!(result, Err(TcpHeaderDecodeError::InputTooShort)));
-        
+
         let buffer = vec![0u8; 19];
         let result = TcpHeader::decode(&buffer);
         assert!(result.is_err());
