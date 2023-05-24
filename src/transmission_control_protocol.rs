@@ -1,6 +1,26 @@
+use std::error::Error;
+use std::fmt;
 /*
  * See: https://www.rfc-editor.org/rfc/rfc9293.html
  */
+
+#[derive(Debug)]
+enum TcpHeaderDecodeError {
+    InputTooShort,
+    InvalidFieldValue(String),
+}
+
+impl fmt::Display for TcpHeaderDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TcpHeaderDecodeError::InputTooShort => write!(f, "Input too short."),
+            TcpHeaderDecodeError::InvalidFieldValue(_todo) => write!(f, "Invalid field value."),
+        }
+    }
+}
+
+impl Error for TcpHeaderDecodeError {}
+
 #[derive(Debug)]
 pub struct TcpHeader {
     /*
@@ -159,8 +179,8 @@ mod tests {
              * Expected Source Port Bytes
              */
             21, 56, /*
-             * Expected Destination Port Bytes
-             */
+                 * Expected Destination Port Bytes
+                 */
             12, 234,
             /*
              * Sequence Number Bytes
@@ -180,8 +200,8 @@ mod tests {
              * Data Offset Bytes and Reserved Bytes
              */
             80, /*
-             * Control Bits Bytes
-             */
+                 * Control Bits Bytes
+                 */
             0,
             /*
              * Window Bytes
