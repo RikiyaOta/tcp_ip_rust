@@ -224,6 +224,13 @@ impl Ipv4Header {
         }
 
         /*
+         * オーバーフローした分を end-around carry して加え戻す
+         */
+        while sum > 0xFFFF {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+
+        /*
          * 4. 和の 1 の補数を取ります。
          *
          * 注意：オーバーフローを無視するので、まずは u16 に type cast する。
