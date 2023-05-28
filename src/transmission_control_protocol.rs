@@ -1,7 +1,12 @@
-use crate::internet_protocol::{Ipv4Address, Ipv4Header};
+use crate::internet_protocol::Ipv4Header;
 use byteorder::{BigEndian, ByteOrder};
 use std::error::Error;
 use std::fmt;
+
+pub mod tcp_packet;
+pub mod tcp_pseudo_header;
+
+pub const TCP_PROTOCOL_NUMBER: u8 = 6;
 
 /*
  * See: https://www.rfc-editor.org/rfc/rfc9293.html
@@ -92,44 +97,6 @@ pub struct ControlBits {
     rst: bool,
     syn: bool,
     fin: bool,
-}
-
-/*
- * NOTE: IPv4 を念頭に実装する。IPv6 の場合は違う。
- */
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct TcpPseudoHeader {
-    /*
-     * Source IPv4 Address.
-     */
-    source_address: Ipv4Address,
-
-    /*
-     * Destination IPv4 Address.
-     */
-    destination_address: Ipv4Address,
-
-    /*
-     * Zero. This filed should be `0`.
-     */
-    zero: u8,
-
-    /*
-     * Protocol Number. TCP の場合は`6`.
-     */
-    ptcl: u8,
-
-    /*
-     * TCP Header Length and the Data Length in octets.
-     */
-    tcp_length: u16,
-}
-
-#[derive(Debug, Clone)]
-pub struct TcpPacket {
-    ip_v4_header: Ipv4Header,
-    tcp_header: TcpHeader,
-    payload: Vec<u8>,
 }
 
 impl TcpHeader {

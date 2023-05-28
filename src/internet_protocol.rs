@@ -1,3 +1,4 @@
+use crate::transmission_control_protocol::TCP_PROTOCOL_NUMBER;
 use byteorder::{BigEndian, ByteOrder};
 use std::error::Error;
 use std::fmt;
@@ -31,7 +32,6 @@ const IPV4_HEADER_UNIT_BITS: usize = 32;
 const IPV4_HEADER_UNIT_BYTES: usize = IPV4_HEADER_UNIT_BITS / 8;
 pub const IPV4_HEADER_MIN_LEN: usize = IHL_MIN_VALUE * IPV4_HEADER_UNIT_BYTES;
 const IPV4_VERSION: u8 = 4;
-const TCP_PROTOCOL_NUMBER: u8 = 6;
 const UDP_PROTOCOL_NUMBER: u8 = 17;
 
 pub type Ipv4Address = [u8; 4];
@@ -165,6 +165,14 @@ impl Ipv4Header {
 
     pub fn get_header_checksum(&self) -> u16 {
         self.header_checksum
+    }
+
+    pub fn get_source_address(&self) -> Ipv4Address {
+        self.source_address
+    }
+
+    pub fn get_destination_address(&self) -> Ipv4Address {
+        self.destination_address
     }
 
     /*
